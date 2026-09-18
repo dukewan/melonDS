@@ -69,33 +69,33 @@ private:
     friend class GLRenderer;
     GLRenderer& Parent;
 
-    int ScaleFactor;
-    int ScreenW, ScreenH;
+    int ScaleFactor {};
+    int ScreenW {}, ScreenH {};
 
     // Non-owning reference to the shared LayerPreShader
-    GLuint LayerPreShader;
-    GLint LayerPreCurBGULoc;
+    GLuint LayerPreShader {};
+    GLint LayerPreCurBGULoc {};
 
     OpenGL::BufferHandle ScanlineConfigUBO;
     OpenGL::BufferHandle SpriteScanlineConfigUBO;
 
     // Non-owning reference to the shared SpritePreShader
-    GLuint SpritePreShader;
+    GLuint SpritePreShader {};
     OpenGL::BufferHandle SpritePreVtxBuffer;
     OpenGL::VertexArrayHandle SpritePreVtxArray;
     std::array<u16, SpritePreVtxDataSize> SpritePreVtxData {};
 
     // Non-owning reference to the shared SpriteShader
-    GLuint SpriteShader;
-    GLint SpriteRenderTransULoc;
+    GLuint SpriteShader {};
+    GLint SpriteRenderTransULoc {};
     OpenGL::BufferHandle SpriteVtxBuffer;
     OpenGL::VertexArrayHandle SpriteVtxArray;
     std::array<u16, SpriteVtxDataSize> SpriteVtxData {};
 
     // Non-owning reference to the shared CompositorShader
-    GLuint CompositorShader;
+    GLuint CompositorShader {};
     OpenGL::BufferHandle CompositorConfigUBO;
-    GLint CompositorScaleULoc;
+    GLint CompositorScaleULoc {};
 
     // base index for a BG layer within the BG texture arrays
     // based on BG type and size
@@ -115,7 +115,7 @@ private:
     OpenGL::TextureHandle PalTex_OBJ;
 
     // Non-owning reference to the shared MosaicTex
-    GLuint MosaicTex;
+    GLuint MosaicTex {};
 
     OpenGL::FramebufferHandles<22> AllBGLayerFB;
     OpenGL::TextureHandles<22> AllBGLayerTex;
@@ -148,7 +148,7 @@ private:
             u32 Clamp;
             u32 __pad0[1];
         } uBGConfig[4];
-    } LayerConfig;
+    } LayerConfig {};
 
     struct sSpriteConfig
     {
@@ -170,9 +170,9 @@ private:
             u32 BGPrio;
             u32 Mosaic;
         } uOAM[128];
-    } SpriteConfig;
-    int NumSprites;
-    bool SpriteUseMosaic;
+    } SpriteConfig {};
+    int NumSprites {};
+    bool SpriteUseMosaic {};
 
     struct sScanlineConfig
     {
@@ -188,47 +188,47 @@ private:
             u32 BGMosaicEnable[4];
             s32 MosaicSize[4];
         } uScanline[192];
-    } ScanlineConfig;
+    } ScanlineConfig {};
 
     struct sSpriteScanlineConfig
     {
-        s32 uMosaicLine[192];
-    } SpriteScanlineConfig;
+        s32 uMosaicLine[192] {};
+    } SpriteScanlineConfig {};
 
     struct sCompositorConfig
     {
-        u32 uBGPrio[4];
-        u32 uEnableOBJ;
-        u32 uEnable3D;
-        u32 uBlendCnt;
-        u32 uBlendEffect;
-        u32 uBlendCoef[4];
-    } CompositorConfig;
+        u32 uBGPrio[4] {};
+        u32 uEnableOBJ {};
+        u32 uEnable3D {};
+        u32 uBlendCnt {};
+        u32 uBlendEffect {};
+        u32 uBlendCoef[4] {};
+    } CompositorConfig {};
 
-    int LastLine;
+    int LastLine {};
 
-    bool UnitEnabled;
+    bool UnitEnabled {};
 
-    u32 DispCnt;
-    u8 LayerEnable;
-    u8 OBJEnable;
-    u8 ForcedBlank;
-    u16 BGCnt[4];
-    u16 BlendCnt;
-    u8 EVA, EVB, EVY;
+    u32 DispCnt {};
+    u8 LayerEnable {};
+    u8 OBJEnable {};
+    u8 ForcedBlank {};
+    u16 BGCnt[4] {};
+    u16 BlendCnt {};
+    u8 EVA {}, EVB {}, EVY {};
 
-    u32 BGVRAMRange[4][4];
+    u32 BGVRAMRange[4][4] {};
 
-    bool LayerConfigDirty;
+    bool LayerConfigDirty {};
 
-    int LastSpriteLine;
-    u16 OAM[512];
+    int LastSpriteLine {};
+    u16 OAM[512] {};
 
-    u32 SpriteDispCnt;
-    bool SpriteConfigDirty;
-    bool SpriteDirty;
+    u32 SpriteDispCnt {};
+    bool SpriteConfigDirty {};
+    bool SpriteDirty {};
 
-    u16 TempPalBuffer[256 * (1 + (4*16))];
+    u16 TempPalBuffer[256 * (1 + (4*16))] {};
 
     bool IsScreenOn();
 

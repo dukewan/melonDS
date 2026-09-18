@@ -60,10 +60,10 @@ private:
     friend class GLRenderer3D;
     friend class ComputeRenderer3D;
 
-    bool IsCompute;
+    bool IsCompute {};
 
-    int ScaleFactor;
-    int ScreenW, ScreenH;
+    int ScaleFactor {};
+    int ScreenW {}, ScreenH {};
 
     OpenGL::BufferHandle RectVtxBuffer {};
     OpenGL::VertexArrayHandle RectVtxArray {};
@@ -86,7 +86,7 @@ private:
         u32 uBrightFactorB;
         float uAuxColorFactor;
         u32 __pad0[3];
-    } FinalPassConfig;
+    } FinalPassConfig {};
 
     // Owned handles to the shaders/textures that both 2D renderers use.
     GLRenderer2D::SharedResources Renderer2DResources;
@@ -117,7 +117,7 @@ private:
         float uSrcAOffset[192];
         float uSrcBColorFactor;
         u32 __pad0[3];
-    } CaptureConfig;
+    } CaptureConfig {};
 
     OpenGL::ProgramHandle CaptureShader {};
     OpenGL::BufferHandle CaptureConfigUBO {};
@@ -131,23 +131,23 @@ private:
     OpenGL::TextureHandle CaptureOutput128Tex {};
 
     OpenGL::ProgramHandle CapDownShader {};
-    GLint CapDownInputLayerULoc;
+    GLint CapDownInputLayerULoc {};
 
     OpenGL::FramebufferHandle CaptureSyncFB {};
     OpenGL::TextureHandle CaptureSyncTex {};
 
     std::array<u16, 256 * 256> AuxInputBufferA {};
     std::array<u16, 256 * 192> AuxInputBufferB {};
-    u8 AuxUsageMask;
+    u8 AuxUsageMask {};
 
-    u32 DispCntA, DispCntB;
-    u16 MasterBrightnessA, MasterBrightnessB;
-    u32 CaptureCnt;
+    u32 DispCntA {}, DispCntB {};
+    u16 MasterBrightnessA {}, MasterBrightnessB {};
+    u32 CaptureCnt {};
 
-    bool NeedPartialRender;
-    int LastLine;
-    int LastCapLine;
-    int Aux0VRAMCap;
+    bool NeedPartialRender {};
+    int LastLine {};
+    int LastCapLine {};
+    int Aux0VRAMCap {};
 
     void SetScaleFactor(int scale);
 

@@ -152,13 +152,13 @@ private:
         float TextureLayer;
     };
 
-    int TileSize;
+    int TileSize {};
     static constexpr int CoarseTileCountX = 8;
-    int CoarseTileCountY;
-    int CoarseTileArea;
-    int CoarseTileW;
-    int CoarseTileH;
-    int ClearCoarseBinMaskLocalSize;
+    int CoarseTileCountY {};
+    int CoarseTileArea {};
+    int CoarseTileW {};
+    int CoarseTileH {};
+    int ClearCoarseBinMaskLocalSize {};
 
     static constexpr int BinStride = 2048/32;
     static constexpr int CoarseBinStride = BinStride/32;
@@ -181,9 +181,9 @@ private:
     };
 
     static constexpr int MaxYSpanSetups = 6144*2;
-    std::vector<SetupIndices> YSpanIndices;
-    SpanSetupY YSpanSetups[MaxYSpanSetups];
-    RenderPolygon RenderPolygons[2048];
+    std::vector<SetupIndices> YSpanIndices {};
+    SpanSetupY YSpanSetups[MaxYSpanSetups] {};
+    RenderPolygon RenderPolygons[2048] {};
 
     TexcacheOpenGL Texcache;
 
@@ -209,15 +209,15 @@ private:
 
     OpenGL::TextureHandles<2> ClearBitmapTex {};
     std::array<std::array<u32, 256*256>, 2> ClearBitmap {};
-    u8 ClearBitmapDirty;
+    u8 ClearBitmapDirty {};
 
     OpenGL::TextureHandle Framebuffer {};
 
-    int ScreenWidth, ScreenHeight;
-    int TilesPerLine, TileLines;
+    int ScreenWidth {}, ScreenHeight {};
+    int TilesPerLine {}, TileLines {};
     int ScaleFactor = -1;
-    int MaxWorkTiles;
-    bool HiresCoordinates;
+    int MaxWorkTiles {};
+    bool HiresCoordinates {};
 
     int ShaderStepIdx = 0;
 
