@@ -26,6 +26,14 @@ set(OPENGL_SHADER_FILES
     3DFinalPassFogFS.glsl
 )
 
+# 游典 (Android, OpenGL ES 3.2): the same shaders as GLSL ES 3.20, from es/ (tools/convert_gles.py),
+# and 3DRender's W-buffer variant as its own pair (ES can't take the #define after the fact).
+# MELONDS_GLES: set by the frontend (melonDS DS for Android, -DMELONDS_GLES=ON).
+if (MELONDS_GLES OR HAVE_OPENGLES)
+    list(TRANSFORM OPENGL_SHADER_FILES PREPEND "es/")
+    list(APPEND OPENGL_SHADER_FILES es/3DRenderVS_W.glsl es/3DRenderFS_W.glsl)
+endif()
+
 foreach(SH_INPUT ${OPENGL_SHADER_FILES})
     get_filename_component(SH_NAME ${SH_INPUT} NAME_WE)
     set(SH_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${SH_NAME}.h")

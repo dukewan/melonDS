@@ -146,7 +146,7 @@ bool GLRenderer::Init()
     glGenTextures(1, &AuxInputTex);
     glBindTexture(GL_TEXTURE_2D_ARRAY, AuxInputTex);
     glTexParams(GL_TEXTURE_2D_ARRAY, GL_REPEAT);
-    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGB5_A1, 256, 256, 2, 0, GL_RGBA, GL_UNSIGNED_SHORT_1_5_5_5_REV, nullptr);
+    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGB5_A1, 256, 256, 2, 0, GL_RGBA, MELONDS_GL_TYPE_1555, nullptr);
 
     glGenTextures(1, &CaptureVRAMTex);
     glBindTexture(GL_TEXTURE_2D_ARRAY, CaptureVRAMTex);
@@ -173,7 +173,7 @@ bool GLRenderer::Init()
     glGenTextures(1, &CaptureSyncTex);
     glBindTexture(GL_TEXTURE_2D, CaptureSyncTex);
     glTexParams(GL_TEXTURE_2D, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB5_A1, 256, 256, 0, GL_RGBA, GL_UNSIGNED_SHORT_1_5_5_5_REV, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB5_A1, 256, 256, 0, GL_RGBA, MELONDS_GL_TYPE_1555, nullptr);
 
     glGenFramebuffers(1, &CaptureSyncFB);
     glBindFramebuffer(GL_FRAMEBUFFER, CaptureSyncFB);
@@ -571,12 +571,12 @@ void GLRenderer::RenderScreen(int ystart, int yend)
             if ((AuxUsageMask & (1<<0)) && (vramcap == -1))
             {
                 glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0, 256, 256, 1, GL_RGBA,
-                                GL_UNSIGNED_SHORT_1_5_5_5_REV, AuxInputBuffer[0]);
+                                MELONDS_GL_TYPE_1555, OpenGL::Pixels1555(AuxInputBuffer[0], 256*256));
             }
             if (AuxUsageMask & (1<<1))
             {
                 glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 1, 256, 192, 1, GL_RGBA,
-                                GL_UNSIGNED_SHORT_1_5_5_5_REV, AuxInputBuffer[1]);
+                                MELONDS_GL_TYPE_1555, OpenGL::Pixels1555(AuxInputBuffer[1], 256*192));
             }
         }
 
@@ -879,8 +879,7 @@ void GLRenderer::SyncVRAMCapture(u32 bank, u32 start, u32 len, bool complete)
 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, CaptureSyncFB);
 
-        glReadPixels(0, 0, 128, 128,
-                     GL_RGBA, GL_UNSIGNED_SHORT_1_5_5_5_REV, &vram[start * 64 * 512]);
+        OpenGL::ReadPixels1555(0, 0, 128, 128, &vram[start * 64 * 512]);
 
         for (u32 j = start * 64; j < (start+1) * 64; j++)
             GPU.VRAMDirty[bank][j] = true;
@@ -898,8 +897,7 @@ void GLRenderer::SyncVRAMCapture(u32 bank, u32 start, u32 len, bool complete)
             if (end > 4)
                 end = 4;
 
-            glReadPixels(0, pos * 64, 256, (end - pos) * 64,
-                         GL_RGBA, GL_UNSIGNED_SHORT_1_5_5_5_REV, &vram[pos * 64 * 512]);
+            OpenGL::ReadPixels1555(0, pos * 64, 256, (end - pos) * 64, &vram[pos * 64 * 512]);
 
             for (u32 j = pos * 64; j < end * 64; j++)
                 GPU.VRAMDirty[bank][j] = true;

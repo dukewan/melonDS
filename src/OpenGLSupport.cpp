@@ -185,6 +185,88 @@ writeError:
     NewShaders.clear();
 }
 
+#ifdef HAVE_OPENGLES
+// 游典 (Android, OpenGL ES 3.2): melonDS's shaders are GLSL 1.40. The same source, as GLSL ES 3.20:
+// its #version, the precisions ES wants declared (integer and array samplers have none by
+// default), and each fragment output's location in the shader (ES has no glBindFragDataLocation).
+std::string ToGLES(const std::string& source, const std::initializer_list<AttributeTarget>* outputs)
+{
+    std::string out = source;
+    size_t version = out.find("#version");
+    size_t lineEnd = version == std::string::npos ? std::string::npos : out.find('\n', version);
+    const char* head =
+        "#version 320 es\n"
+        "precision highp float;\n"
+        "precision highp int;\n"
+        "precision highp sampler2D;\n"
+        "precision highp usampler2D;\n"
+        "precision highp isampler2D;\n"
+        "precision highp sampler2DArray;\n"
+        "precision highp usampler2DArray;\n"
+        "precision highp sampler3D;\n";
+    if (version != std::string::npos && lineEnd != std::string::npos)
+        out.replace(version, lineEnd - version + 1, head);
+    else
+        out.insert(0, head);
+    if (outputs)
+    {
+        for (const AttributeTarget& target : *outputs)
+        {
+            // "out vec4 oColor;" (any type), at the start of a line.
+            std::string name = std::string(" ") + target.Name + ";";
+            size_t at = 0;
+            while ((at = out.find(name, at)) != std::string::npos)
+            {
+                size_t lineStart = out.rfind('\n', at);
+                lineStart = lineStart == std::string::npos ? 0 : lineStart + 1;
+                if (out.compare(lineStart, 4, "out ") == 0)
+                {
+                    std::string layout = "layout(location = " + std::to_string(target.Location) + ") ";
+                    out.insert(lineStart, layout);
+                    at += layout.size();
+                }
+                at += name.size();
+            }
+        }
+    }
+    return out;
+}
+#endif
+
+const void* Pixels1555(const void* colors, size_t count)
+{
+#ifdef HAVE_OPENGLES
+    static thread_local std::vector<u16> buffer;
+    buffer.resize(count);
+    const u16* in = static_cast<const u16*>(colors);
+    for (size_t i = 0; i < count; i++)
+    {
+        u16 v = in[i];
+        buffer[i] = ((v & 0x1F) << 11) | (((v >> 5) & 0x1F) << 6) | (((v >> 10) & 0x1F) << 1) | (v >> 15);
+    }
+    return buffer.data();
+#else
+    return colors;
+#endif
+}
+
+void ReadPixels1555(GLint x, GLint y, GLsizei w, GLsizei h, void* out)
+{
+#ifdef HAVE_OPENGLES
+    static thread_local std::vector<u8> rgba;
+    rgba.resize(size_t(w) * h * 4);
+    glReadPixels(x, y, w, h, GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
+    u16* dst = static_cast<u16*>(out);
+    for (size_t i = 0, n = size_t(w) * h; i < n; i++)
+    {
+        const u8* c = &rgba[i * 4];
+        dst[i] = (c[3] >= 128 ? 0x8000 : 0) | ((c[2] >> 3) << 10) | ((c[1] >> 3) << 5) | (c[0] >> 3);
+    }
+#else
+    glReadPixels(x, y, w, h, GL_RGBA, GL_UNSIGNED_SHORT_1_5_5_5_REV, out);
+#endif
+}
+
 bool CompilerShader(GLuint& id, const std::string& source, const std::string& name, const std::string& type)
 {
     int res;
@@ -330,21 +412,31 @@ bool CompileVertexFragmentProgram(GLuint& result,
 
     bool linkingSucess = false;
 
+#ifdef HAVE_OPENGLES
+    if (!CompilerShader(shaders[0], ToGLES(vs, nullptr), name, "vertex"))
+        goto error;
+
+    if (!CompilerShader(shaders[1], ToGLES(fs, &fragmentOutAttrs), name, "fragment"))
+        goto error;
+#else
     if (!CompilerShader(shaders[0], vs, name, "vertex"))
         goto error;
 
     if (!CompilerShader(shaders[1], fs, name, "fragment"))
         goto error;
+#endif
 
 
     for (const AttributeTarget& target : vertexInAttrs)
     {
         glBindAttribLocation(result, target.Location, target.Name);
     }
+#ifndef HAVE_OPENGLES
     for (const AttributeTarget& target : fragmentOutAttrs)
     {
         glBindFragDataLocation(result, target.Location, target.Name);
     }
+#endif
 
     linkingSucess = LinkProgram(result, shaders, 2);
 

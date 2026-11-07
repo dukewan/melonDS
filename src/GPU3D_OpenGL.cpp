@@ -33,6 +33,10 @@ namespace melonDS
 #include "OpenGL_shaders/3DClearBitmapFS.h"
 #include "OpenGL_shaders/3DRenderVS.h"
 #include "OpenGL_shaders/3DRenderFS.h"
+#ifdef HAVE_OPENGLES
+#include "OpenGL_shaders/3DRenderVS_W.h"
+#include "OpenGL_shaders/3DRenderFS_W.h"
+#endif
 #include "OpenGL_shaders/3DFinalPassVS.h"
 #include "OpenGL_shaders/3DFinalPassEdgeFS.h"
 #include "OpenGL_shaders/3DFinalPassFogFS.h"
@@ -44,6 +48,11 @@ bool GLRenderer3D::BuildRenderShader(bool wbuffer)
     char shadername[32];
     snprintf(shadername, sizeof(shadername), "RenderShader%c", wbuffer?'W':'Z');
 
+#ifdef HAVE_OPENGLES
+    // Converted ahead of time, each variant on its own (OpenGL_shaders/es).
+    std::string vsbuf = wbuffer ? k3DRenderVS_W : k3DRenderVS;
+    std::string fsbuf = wbuffer ? k3DRenderFS_W : k3DRenderFS;
+#else
     std::string vsbuf = k3DRenderVS;
     if (wbuffer)
     {
@@ -57,6 +66,7 @@ bool GLRenderer3D::BuildRenderShader(bool wbuffer)
         auto pos = fsbuf.find('\n') + 1;
         fsbuf = fsbuf.substr(0, pos) + wbufdef + fsbuf.substr(pos);
     }
+#endif
 
     GLuint prog;
     bool ret = OpenGL::CompileVertexFragmentProgram(prog,
@@ -1382,9 +1392,15 @@ void GLRenderer3D::RenderFrame()
     ShaderConfig.uFogShift = GPU3D.RenderFogShift;
 
     glBindBuffer(GL_UNIFORM_BUFFER, ShaderConfigUBO);
+#ifdef HAVE_OPENGLES
+    // ES has glMapBuffer only as OES_mapbuffer, which the Adreno 740 (AYN Thor) refuses for a
+    // uniform buffer: the 3D renderer's config never got there and the 3D layer stayed black.
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(ShaderConfig), &ShaderConfig);
+#else
     void* unibuf = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
     if (unibuf) memcpy(unibuf, &ShaderConfig, sizeof(ShaderConfig));
     glUnmapBuffer(GL_UNIFORM_BUFFER);
+#endif
 
     glDisable(GL_SCISSOR_TEST);
     glEnable(GL_DEPTH_TEST);
