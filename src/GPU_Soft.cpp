@@ -251,6 +251,11 @@ void SoftRenderer::DrawScanlineB(u32 line, u32* dst)
 
 void SoftRenderer::DoCapture(u32 line)
 {
+    CaptureScanline(GPU, line, Output2D[0], Output3D);
+}
+
+void SoftRenderer::CaptureScanline(melonDS::GPU& GPU, u32 line, u32* src2D, u32* src3D)
+{
     u32 captureCnt = GPU.CaptureCnt;
 
     u32 width, height;
@@ -279,9 +284,9 @@ void SoftRenderer::DoCapture(u32 line)
 
     u32* srcA;
     if (captureCnt & (1<<24))
-        srcA = Output3D;
+        srcA = src3D;
     else
-        srcA = Output2D[0];
+        srcA = src2D;
 
     u16* srcB = nullptr;
     if (captureCnt & (1<<25))

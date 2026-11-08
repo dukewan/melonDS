@@ -98,6 +98,7 @@ if (ENABLE_OGLRENDERER)
     add_subdirectory(OpenGL_shaders)
     target_sources(core PRIVATE
         GPU_OpenGL.cpp
+        GPU_Hybrid.cpp
         GPU2D_OpenGL.cpp
         GPU3D_OpenGL.cpp
         GPU3D_Compute.cpp

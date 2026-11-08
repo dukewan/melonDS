@@ -26,12 +26,21 @@
 
 namespace melonDS
 {
-class GLRenderer;
+
+/// What GLRenderer3D (and ComputeRenderer3D) hand to and take from the renderer round them:
+/// GLRenderer's, and the HybridRenderer's (游典), whose captures stay in VRAM (no capture textures).
+class GL3DHost
+{
+public:
+    GLuint OutputTex3D {};
+    GLuint CaptureOutput256Tex {};
+    GLuint CaptureOutput128Tex {};
+};
 
 class GLRenderer3D : public Renderer3D
 {
 public:
-    GLRenderer3D(melonDS::GPU3D& gpu3D, GLRenderer& parent) noexcept;
+    GLRenderer3D(melonDS::GPU3D& gpu3D, GL3DHost& parent) noexcept;
     ~GLRenderer3D() override;
     bool Init() override;
     void Reset() override;
@@ -43,10 +52,14 @@ public:
     [[nodiscard]] int GetScaleFactor() const noexcept { return ScaleFactor; }
 
     void RenderFrame() override;
+
+    /// The frame as drawn, at the DS's own size, read back for [GetLine] (a display capture of the
+    /// 3D by a renderer that composites in software: the HybridRenderer). Call before line 0's GetLine.
+    void PrepareCaptureFrame();
     u32* GetLine(int line) override;
 
 private:
-    GLRenderer& Parent;
+    GL3DHost& Parent;
 
     // GL version requirements
     // * texelFetch: 3.0 (GLSL 1.30)     (3.2/1.50 for MS)
@@ -161,6 +174,11 @@ private:
     GLuint ColorBufferTex {}, DepthBufferTex {}, AttrBufferTex {};
 
     GLuint MainFramebuffer {};
+
+    // PrepareCaptureFrame / GetLine: the frame at 256x192, read back through a pixel buffer.
+    GLuint DownscaleTex {}, DownscaleFramebuffer {}, PixelbufferID {};
+    bool CaptureFramePending = false;
+    u32 Framebuffer[256*192] {};
 };
 }
 #endif

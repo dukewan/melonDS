@@ -22,12 +22,12 @@
 
 namespace melonDS
 {
-class SoftRenderer;
+class Soft2DHost;
 
 class SoftRenderer2D : public Renderer2D
 {
 public:
-    SoftRenderer2D(melonDS::GPU2D& gpu2D, SoftRenderer& parent);
+    SoftRenderer2D(melonDS::GPU2D& gpu2D, Soft2DHost& parent);
     ~SoftRenderer2D() override;
     bool Init() override { return true; }
     void Reset() override;
@@ -38,7 +38,7 @@ public:
     void VBlankEnd() override {};
 
 private:
-    SoftRenderer& Parent;
+    Soft2DHost& Parent;
 
     enum
     {
@@ -51,7 +51,9 @@ private:
         OBJ_Mosaic = (1<<20),
     };
 
-    alignas(8) u32 BGOBJLine[256*2];
+    // Three slots: the top layer, the one under it, and (Parent.Accelerated) the blend for the
+    // compositor; DrawPixel pushes the layers down.
+    alignas(8) u32 BGOBJLine[256*3];
 
     alignas(8) u8 WindowMask[256];
 

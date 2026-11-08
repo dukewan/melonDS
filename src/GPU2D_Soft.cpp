@@ -22,7 +22,7 @@
 namespace melonDS
 {
 
-SoftRenderer2D::SoftRenderer2D(melonDS::GPU2D& gpu2D, SoftRenderer& parent)
+SoftRenderer2D::SoftRenderer2D(melonDS::GPU2D& gpu2D, Soft2DHost& parent)
     : Renderer2D(gpu2D), Parent(parent)
 {
     // mosaic table is initialized at compile-time
@@ -321,7 +321,7 @@ void SoftRenderer2D::DrawScanline_BGOBJ(u32 line, u32* dst)
 
         for (int i = 0; i < 256; i+=2)
             *(u64*)&BGOBJLine[i] = backdrop;
-        for (int i = 256; i < 512; i+=2)
+        for (int i = 256; i < 768; i+=2)
             *(u64*)&BGOBJLine[i] = 0;
     }
 
@@ -348,12 +348,105 @@ void SoftRenderer2D::DrawScanline_BGOBJ(u32 line, u32* dst)
     // color special effects
     // can likely be optimized
 
-    for (int i = 0; i < 256; i++)
+    if (!Parent.Accelerated)
     {
-        u32 val1 = BGOBJLine[i];
-        u32 val2 = BGOBJLine[256+i];
+        for (int i = 0; i < 256; i++)
+        {
+            u32 val1 = BGOBJLine[i];
+            u32 val2 = BGOBJLine[256+i];
 
-        dst[i] = ColorComposite(i, val1, val2);
+            dst[i] = ColorComposite(i, val1, val2);
+        }
+        return;
+    }
+
+    // The 3D is the GPU's (HybridRenderer): where a 3D pixel may be, the layer under it and the
+    // blend to do go out apart (val1, val2, val3), for the compositor shader — melonDS 1.1's
+    // accelerated mode. Elsewhere the composite is done, val3 saying so (7).
+    if (GPU2D.Num == 0)
+    {
+        u32 blendCnt = GPU2D.BlendCnt;
+        for (int i = 0; i < 256; i++)
+        {
+            u32 val1 = BGOBJLine[i];
+            u32 val2 = BGOBJLine[256+i];
+            u32 val3 = BGOBJLine[512+i];
+
+            u32 flag1 = val1 >> 24;
+            u32 flag2 = val2 >> 24;
+
+            u32 bldcnteffect = (blendCnt >> 6) & 0x3;
+
+            u32 target1;
+            if      (flag1 & 0x80) target1 = 0x0010;
+            else if (flag1 & 0x40) target1 = 0x0001;
+            else                   target1 = flag1;
+
+            u32 target2;
+            if      (flag2 & 0x80) target2 = 0x1000;
+            else if (flag2 & 0x40) target2 = 0x0100;
+            else                   target2 = flag2 << 8;
+
+            if (((flag1 & 0xC0) == 0x40) && (blendCnt & target2))
+            {
+                // 3D on top, blending
+                dst[i]     = val2;
+                dst[256+i] = ColorComposite(i, val2, val3);
+                dst[512+i] = 0x04000000;
+            }
+            else if ((flag1 & 0xC0) == 0x40)
+            {
+                // 3D on top, normal/fade
+                if (bldcnteffect == 1)        bldcnteffect = 0;
+                if (!(blendCnt & 0x0001))     bldcnteffect = 0;
+                if (!(WindowMask[i] & 0x20))  bldcnteffect = 0;
+
+                dst[i]     = val2;
+                dst[256+i] = ColorComposite(i, val2, val3);
+                dst[512+i] = (bldcnteffect << 24) | (GPU2D.EVY << 8);
+            }
+            else if (((flag2 & 0xC0) == 0x40) && ((blendCnt & 0x01C0) == 0x0140))
+            {
+                // 3D on bottom, blending
+                u32 eva, evb;
+                if ((flag1 & 0xC0) == 0xC0)
+                {
+                    eva = flag1 & 0x1F;
+                    evb = 16 - eva;
+                }
+                else if (((blendCnt & target1) && (WindowMask[i] & 0x20)) ||
+                         ((flag1 & 0xC0) == 0x80))
+                {
+                    eva = GPU2D.EVA;
+                    evb = GPU2D.EVB;
+                }
+                else
+                    bldcnteffect = 7;
+
+                dst[i]     = val1;
+                dst[256+i] = ColorComposite(i, val1, val3);
+                dst[512+i] = (bldcnteffect << 24) | (evb << 16) | (eva << 8);
+            }
+            else
+            {
+                // no potential 3D pixel involved
+                dst[i]     = ColorComposite(i, val1, val2);
+                dst[256+i] = 0;
+                dst[512+i] = 0x07000000;
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < 256; i++)
+        {
+            u32 val1 = BGOBJLine[i];
+            u32 val2 = BGOBJLine[256+i];
+
+            dst[i]     = ColorComposite(i, val1, val2);
+            dst[256+i] = 0;
+            dst[512+i] = 0x07000000;
+        }
     }
 }
 
@@ -364,12 +457,27 @@ void SoftRenderer2D::DrawPixel(u32* dst, u16 color, u32 flag)
     u8 g = ((color & 0x03E0) >> 4) | ((color & 0x8000) >> 15);
     u8 b = (color & 0x7C00) >> 9;
 
+    *(dst+512) = *(dst+256);
     *(dst+256) = *dst;
     *dst = r | (g << 8) | (b << 16) | flag;
 }
 
 void SoftRenderer2D::DrawBG_3D()
 {
+    if (Parent.Accelerated)
+    {
+        // The 3D is the GPU's: a placeholder, the compositor puts the real pixel in (or not).
+        for (int i = 0; i < 256; i++)
+        {
+            if (!(WindowMask[i] & 0x01)) continue;
+
+            BGOBJLine[i+512] = BGOBJLine[i+256];
+            BGOBJLine[i+256] = BGOBJLine[i];
+            BGOBJLine[i] = 0x40000000; // 3D-layer placeholder
+        }
+        return;
+    }
+
     for (int i = 0; i < 256; i++)
     {
         u32 c = Parent.Output3D[i];

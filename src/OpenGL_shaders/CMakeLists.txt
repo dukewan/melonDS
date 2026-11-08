@@ -24,6 +24,9 @@ set(OPENGL_SHADER_FILES
     3DFinalPassVS.glsl
     3DFinalPassEdgeFS.glsl
     3DFinalPassFogFS.glsl
+
+    HybridCompositorVS.glsl
+    HybridCompositorFS.glsl
 )
 
 # 游典 (Android, OpenGL ES 3.2): the same shaders as GLSL ES 3.20, from es/ (tools/convert_gles.py),

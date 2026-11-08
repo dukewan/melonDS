@@ -28,7 +28,7 @@
 namespace melonDS
 {
 
-class GLRenderer : public Renderer
+class GLRenderer : public Renderer, public GL3DHost
 {
 public:
     GLRenderer(melonDS::NDS& nds, bool compute);
@@ -68,7 +68,6 @@ private:
     GLuint RectVtxBuffer {};
     GLuint RectVtxArray {};
 
-    GLuint OutputTex3D {};
     GLuint OutputTex2D[2] {};
 
     struct sFinalPassConfig
@@ -121,9 +120,7 @@ private:
     GLuint CaptureVtxArray {};
 
     GLuint CaptureOutput256FB[4] {};
-    GLuint CaptureOutput256Tex {};
     GLuint CaptureOutput128FB[16] {};
-    GLuint CaptureOutput128Tex {};
 
     GLuint CapDownShader {};
     GLint CapDownInputLayerULoc {};

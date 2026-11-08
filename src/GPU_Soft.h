@@ -26,7 +26,22 @@
 namespace melonDS
 {
 
-class SoftRenderer : public Renderer
+/// What SoftRenderer2D draws into and reads, shared by SoftRenderer and HybridRenderer (游典: the
+/// 3D on the GPU, the 2D here).
+class Soft2DHost
+{
+public:
+    u32* Output3D = nullptr;
+
+    /// Each engine's composited line; three slots when [Accelerated] (melonDS 1.1's layout).
+    alignas(8) u32 Output2D[2][256*3] {};
+
+    /// The 3D is drawn elsewhere (HybridRenderer): round a 3D pixel the 2D composite keeps the
+    /// layers apart — val1, val2 and the blend to do (val3) — for a compositor to put the real 3D in.
+    bool Accelerated = false;
+};
+
+class SoftRenderer : public Renderer, public Soft2DHost
 {
 public:
     explicit SoftRenderer(melonDS::NDS& nds);
@@ -51,14 +66,15 @@ public:
 
     bool GetFramebuffers(void** top, void** bottom) override;
 
+    /// Display capture of [line] into VRAM: [src2D] the composited 2D line (3D in it), [src3D]
+    /// the 3D line, both in the software renderer's format. The HybridRenderer's captures too.
+    static void CaptureScanline(melonDS::GPU& GPU, u32 line, u32* src2D, u32* src3D);
+
 private:
     friend class SoftRenderer2D;
     friend class SoftRenderer3D;
 
     u32* Framebuffer[2][2];
-
-    u32* Output3D;
-    alignas(8) u32 Output2D[2][256];
 
     void DrawScanlineA(u32 line, u32* dst);
     void DrawScanlineB(u32 line, u32* dst);

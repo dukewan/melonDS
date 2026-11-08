@@ -113,7 +113,7 @@ void SetupDefaultTexParams(GLuint tex)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 }
 
-GLRenderer3D::GLRenderer3D(melonDS::GPU3D& gpu3D, GLRenderer& parent) noexcept :
+GLRenderer3D::GLRenderer3D(melonDS::GPU3D& gpu3D, GL3DHost& parent) noexcept :
     Renderer3D(gpu3D), Parent(parent), Texcache(gpu3D.GPU, TexcacheOpenGLLoader(false))
 {
     ClearBitmap[0] = new u32[256*256];
@@ -292,6 +292,18 @@ bool GLRenderer3D::Init()
 
     Parent.OutputTex3D = ColorBufferTex;
 
+    // the frame at the DS's size, for a software capture of it (PrepareCaptureFrame)
+    glGenTextures(1, &DownscaleTex);
+    SetupDefaultTexParams(DownscaleTex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 192, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glGenFramebuffers(1, &DownscaleFramebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, DownscaleFramebuffer);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, DownscaleTex, 0);
+    glGenBuffers(1, &PixelbufferID);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, PixelbufferID);
+    glBufferData(GL_PIXEL_PACK_BUFFER, 256*192*4, nullptr, GL_DYNAMIC_READ);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+
     glEnable(GL_BLEND);
     glBlendEquationSeparate(GL_FUNC_ADD, GL_MAX);
 
@@ -307,6 +319,9 @@ GLRenderer3D::~GLRenderer3D()
     Texcache.Reset();
 
     glDeleteFramebuffers(1, &MainFramebuffer);
+    glDeleteFramebuffers(1, &DownscaleFramebuffer);
+    glDeleteTextures(1, &DownscaleTex);
+    glDeleteBuffers(1, &PixelbufferID);
     glDeleteTextures(1, &ColorBufferTex);
     glDeleteTextures(1, &DepthBufferTex);
     glDeleteTextures(1, &AttrBufferTex);
@@ -1501,9 +1516,44 @@ void GLRenderer3D::RenderFrame()
     }
 }
 
+void GLRenderer3D::PrepareCaptureFrame()
+{
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, MainFramebuffer);
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, DownscaleFramebuffer);
+    glBlitFramebuffer(0, 0, ScreenW, ScreenH, 0, 0, 256, 192, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, DownscaleFramebuffer);
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, PixelbufferID);
+    glReadPixels(0, 0, 256, 192, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    CaptureFramePending = true;
+}
+
 u32* GLRenderer3D::GetLine(int line)
 {
-    return nullptr;
+    if (line == 0 && CaptureFramePending)
+    {
+        CaptureFramePending = false;
+        glBindBuffer(GL_PIXEL_PACK_BUFFER, PixelbufferID);
+        void* data = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, 256*192*4, GL_MAP_READ_BIT);
+        if (data)
+        {
+            memcpy(Framebuffer, data, 256*192*4);
+            glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+        }
+        glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+
+        // RGBA8 to the software renderer's: 6-bit r, g, b in their bytes, 5-bit alpha in the fourth
+        for (int i = 0; i < 256*192; i++)
+        {
+            u32 v = Framebuffer[i];
+            Framebuffer[i] = ((v & 0x00FCFCFC) >> 2) | ((v & 0xF8000000) >> 3);
+        }
+    }
+    return &Framebuffer[line * 256];
 }
 
 }
