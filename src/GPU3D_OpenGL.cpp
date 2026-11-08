@@ -265,7 +265,9 @@ bool GLRenderer3D::Init()
     glEnableVertexAttribArray(2); // texcoords
     glVertexAttribIPointer(2, 2, GL_SHORT, 7*4, (void*)(3*4));
     glEnableVertexAttribArray(3); // attrib
-    glVertexAttribIPointer(3, 3, GL_UNSIGNED_INT, 7*4, (void*)(4*4));
+    // vPolygonAttr is an ivec3: given as GL_INT (the same bits). OpenGL ES leaves a signed/unsigned
+    // mismatch undefined, and a Mali-G76 (GT78) read it wrong: every 3D texture came out white.
+    glVertexAttribIPointer(3, 3, GL_INT, 7*4, (void*)(4*4));
 
     glGenBuffers(1, &IndexBufferID);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IndexBufferID);
